@@ -1,0 +1,14 @@
+{
+    "ConnectionStrings": {
+        "PostgresConnection": "Host=localhost;Port=5432;Database=philosophers;Username=postgres;Password=postgres"
+    },
+    "PhilosopherConfiguration": {
+        "EatingTimeMax": 50,
+        "EatingTimeMin": 40,
+        "TakeForkTimeMax": 20,
+        "TakeForkTimeMin": 20,
+        "ThinkingTimeMax": 100,
+        "ThinkingTimeMin": 30,
+        "Steps": 10
+    }
+}
