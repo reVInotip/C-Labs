@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Interface;
 
-namespace Core.Models.Utils;
+namespace Services.Utils;
 
 public class Philosopher : IPhilosopher
 {

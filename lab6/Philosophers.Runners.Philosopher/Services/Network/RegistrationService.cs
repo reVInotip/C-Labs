@@ -13,11 +13,16 @@ public class RegistrationService(IHttpClientFactory client) : IRegistration
 {
     private readonly HttpClient _client = client.CreateClient("registration-client");
 
-    public async Task<PhilosopherWithForksIds?> Registration()
+    public async Task<PhilosopherWithForksIds?> Registration(string name)
     {
-        var response = await _client.GetAsync("register-me");
+        var formData = new Dictionary<string, string> { { "name", name } };
+        var content = new FormUrlEncodedContent(formData);
+        var response = await _client.PostAsync("register-me", content);
+
         using var stream = await response.Content.ReadAsStreamAsync();
 
-        return await JsonSerializer.DeserializeAsync<PhilosopherWithForksIds>(stream);
+        return await JsonSerializer.DeserializeAsync<PhilosopherWithForksIds>(
+            stream,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 }

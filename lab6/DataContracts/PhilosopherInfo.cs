@@ -5,4 +5,8 @@ using System.Threading.Tasks;
 
 namespace DataContracts;
 
-public record PhilosopherInfo(string Info, int Id);
+public class PhilosopherInfo
+{
+    public required string Info { get; set; }
+    public int Id { get; set; }
+}

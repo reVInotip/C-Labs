@@ -21,10 +21,13 @@ public class SimulationManagerController(
     private readonly IChannel<ForkCommandWithIdChannelItem> _commandChannel = commandChannel;
     private readonly IChannel<CommandAnswerChannelItem> _commandAnswerChannel = commandAnswerChannel;
 
-    [HttpGet("register-me")]
+    [HttpPost("register-me")]
     public async Task<PhilosopherWithForksIds> RegisterPhilosopher([FromForm] string name)
     {
-        var fullUri = $"{Request.Scheme}://{Request.Host}";
+        var clientIp = HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString();
+
+        var fullUri = $"{Request.Scheme}://{clientIp}:8080/Philosopher/";
+        Console.WriteLine(fullUri);
 
         _channel.NotifyWith(this, new ChannelRegistrationEvent(name, fullUri));
 
@@ -64,5 +67,11 @@ public class SimulationManagerController(
 
         var answer = await _commandAnswerChannel.Reader.ReadAsync();
         return answer.Ok;
+    }
+
+    [HttpGet("health")]
+    public string Health()
+    {
+        return "Service is health";
     }
 }

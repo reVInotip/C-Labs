@@ -48,7 +48,9 @@ public class ForkService(IHttpClientFactory client) : IFork
         var response = await _client.PostAsync("lock-or-take-fork", content);
 
         using var stream = await response.Content.ReadAsStreamAsync();
-        var data = await JsonSerializer.DeserializeAsync<bool>(stream);
+        var data = await JsonSerializer.DeserializeAsync<bool>(
+            stream,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         return data;
     }
 
@@ -68,7 +70,9 @@ public class ForkService(IHttpClientFactory client) : IFork
         var response = await _client.PostAsync("lock-or-take-fork", content);
 
         using var stream = await response.Content.ReadAsStreamAsync();
-        var data = await JsonSerializer.DeserializeAsync<bool>(stream);
+        var data = await JsonSerializer.DeserializeAsync<bool>(
+            stream,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         return data;
     }
 

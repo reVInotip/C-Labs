@@ -4,18 +4,19 @@ using InterfaceContracts.Channel;
 using Services.Channels.Items;
 using Services.Channels.Events;
 using DataContracts;
+using System.Threading.Tasks;
 
 namespace Core.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class PhilosopherControllers(
-    ILogger<PhilosopherControllers> logger,
+public class PhilosopherController(
+    ILogger<PhilosopherController> logger,
     IChannel<PhilosopherToControllerChannelItem> channel,
     IChannel<PhilosopherActionItem> actionChannel,
     IChannel<ApplicationStopItem> stoppingChannel) : Controller
 {
-    private readonly ILogger<PhilosopherControllers> _logger = logger;
+    private readonly ILogger<PhilosopherController> _logger = logger;
     private readonly IChannel<PhilosopherToControllerChannelItem> _channel = channel;
     private readonly IChannel<PhilosopherActionItem> _actionChannel = actionChannel;
     private readonly IChannel<ApplicationStopItem> _stoppingChannel = stoppingChannel;
@@ -26,7 +27,11 @@ public class PhilosopherControllers(
         _channel.Notify(this);
 
         var item = await _channel.Reader.ReadAsync();
-        return new PhilosopherInfo(item.PhilosopherInfo, item.Id);
+        return new PhilosopherInfo
+        {
+            Info = item.PhilosopherInfo,
+            Id = item.Id
+        };
     }
 
     [HttpGet("stats")]
@@ -35,7 +40,11 @@ public class PhilosopherControllers(
         _channel.NotifyWith(this, new ChannelScoresEvent() {SimulationTime = simulationTime});
 
         var item = await _channel.Reader.ReadAsync();
-        return new PhilosopherInfo(item.PhilosopherInfo, item.Id);
+        return new PhilosopherInfo
+        {
+            Info = item.PhilosopherInfo,
+            Id = item.Id
+        };
     }
 
     [HttpGet("action")]
@@ -44,12 +53,17 @@ public class PhilosopherControllers(
         _actionChannel.Notify(this);
 
         var item = await _actionChannel.Reader.ReadAsync();
-        return new PhilosopherAction(item.iAmEating);
+        return new PhilosopherAction
+        {
+            IAmEating = item.iAmEating
+        };
     }
 
     [HttpGet("stop")]
-    public void StopApplication()
+    public async Task StopApplication()
     {
         _stoppingChannel.Notify(this);
+
+        await _stoppingChannel.Reader.ReadAsync();
     }
 }

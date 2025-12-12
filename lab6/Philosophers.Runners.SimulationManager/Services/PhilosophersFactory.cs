@@ -9,33 +9,45 @@ using Services.Utils;
 
 namespace Services;
 
-public class ForksFactory : IForksFactory
+public class PhilosophersFactory : IPhilosophersFactory
 {
-    private readonly Type _forkType;
+    private readonly Type _philosopherType;
     private readonly int _countPhilosophers;
-    private IFork[] _forks;
-    
-    public ForksFactory(IOptions<ServicesConfigurations> options)
+    private IPhilosopher[] _philosophers;
+    private int _currentIndex = 0;
+    private readonly object _lock = new();
+
+    public PhilosophersFactory(
+        IOptions<ServicesConfigurations> options,
+        IForksFactory forksFactory)
     {
         _countPhilosophers = options.Value.CountPhilosophers;
-        _forkType = FindForkType();
+        _philosopherType = FindPhilosopherType();
         
         // Создаем N вилок для N философов
-        _forks = new IFork[_countPhilosophers];
+        _philosophers = new IPhilosopher[_countPhilosophers];
         for (int i = 0; i < _countPhilosophers; i++)
         {
-            var fork = (IFork)Activator.CreateInstance(_forkType)!;
-            fork.Id = i;
-            _forks[i] = fork;
+            var philosopher = (IPhilosopher)Activator.CreateInstance(_philosopherType)!;
+            philosopher.Id = i;
+            philosopher.LeftFork = forksFactory.GetFork((i + 1) % _countPhilosophers);
+            philosopher.RightFork = forksFactory.GetFork(i);
+            _philosophers[i] = philosopher;
         }
     }
-    
-    public IFork GetFork(int index)
+
+    public IPhilosopher Create()
     {
-        return _forks[index];
+        lock (_lock)
+        {
+            // Возвращаем вилку по кругу
+            var philosopher = _philosophers[_currentIndex];
+            _currentIndex = (_currentIndex + 1) % _countPhilosophers;
+            return philosopher;
+        }
     }
 
-    private Type FindForkType()
+    private Type FindPhilosopherType()
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         
@@ -46,7 +58,7 @@ public class ForksFactory : IForksFactory
                 var types = assembly.GetTypes();
                 foreach (var type in types)
                 {
-                    if (typeof(IFork).IsAssignableFrom(type) 
+                    if (typeof(IPhilosopher).IsAssignableFrom(type) 
                         && type.IsClass 
                         && !type.IsAbstract 
                         && type.GetConstructor(Type.EmptyTypes) != null)
@@ -63,6 +75,6 @@ public class ForksFactory : IForksFactory
         }
         
         throw new InvalidOperationException($"No implementation of {nameof(IFork)} found in loaded assemblies");
-        //return typeof(Fork);
+        //return typeof(Philosopher);
     }
 }

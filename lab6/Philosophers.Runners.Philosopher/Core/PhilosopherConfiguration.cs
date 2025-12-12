@@ -9,5 +9,4 @@ sealed public class PhilosopherConfiguration
     public int ThinkingTimeMax { get; set; }
     public int ThinkingTimeMin { get; set; }
     public required string Name { get; set; }
-    public int Id { get; set; }
 }

@@ -13,5 +13,4 @@ public interface IPhilosopher
     int CountEatingFood { get; }
     int HungryTime { get; }
     string Name { get; protected internal set; }
-    bool IsEating();
 }

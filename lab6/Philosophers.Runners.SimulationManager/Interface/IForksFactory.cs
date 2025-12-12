@@ -7,5 +7,5 @@ namespace Interface;
 
 public interface IForksFactory
 {
-    IFork Create();
+    IFork GetFork(int index);
 }

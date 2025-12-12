@@ -26,8 +26,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient("philosopher-client", cfg =>
 {
-    string uri = builder.Configuration["HOST_URI"]!;
-    cfg.BaseAddress = new Uri(uri);
     cfg.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
@@ -44,8 +42,10 @@ builder.Services.AddSingleton<ILogger<DeadlockAnalyzer>, Logger<DeadlockAnalyzer
 
 builder.Services.AddSingleton<CompletionCoordinator>();
 builder.Services.AddSingleton<IPhilosopherNetwork, PhilosopherServiceNetwork>();
-builder.Services.AddSingleton<IForksFactory, ForksFactory>();
 builder.Services.AddSingleton<PhilosophersStorage>();
+
+builder.Services.AddTransient<IForksFactory, ForksFactory>();
+builder.Services.AddSingleton<IPhilosophersFactory, PhilosophersFactory>();
 
 builder.Services.AddHostedService<Waiter>();
 builder.Services.AddHostedService<DeadlockAnalyzer>();

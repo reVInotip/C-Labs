@@ -5,7 +5,6 @@ using Interface;
 using Services.Channels.Items;
 using Services;
 using Services.Network;
-using Core.Models.Utils;
 using Services.Channels.Events;
 using Microsoft.AspNetCore.Http.Features;
 using System.Threading.Tasks;
@@ -18,10 +17,12 @@ public class DeadlockAnalyzer : BackgroundService, IDeadlockAnalyzer
     private readonly ILogger<DeadlockAnalyzer> _logger;
     private readonly IPhilosopherNetwork _network;
     private readonly IForksFactory _forksFactory;
+    private readonly int _countPhilosophers = 0;
 
     public DeadlockAnalyzer
     (
         ILogger<DeadlockAnalyzer> logger,
+        IOptions<ServicesConfigurations> servicesOptions,
         IForksFactory forksFactory,
         IPhilosopherNetwork network,
         PhilosophersStorage storage
@@ -29,17 +30,18 @@ public class DeadlockAnalyzer : BackgroundService, IDeadlockAnalyzer
     {
         _logger = logger;
         _forksFactory = forksFactory;
+        _countPhilosophers = servicesOptions.Value.CountPhilosophers;
         _storage = storage;
         _network = network;
     }
 
     private async Task<bool> IsDeadlock()
     {
-        bool isCheckAnyPhilosopher = false;
+        if (_storage.Count < _countPhilosophers)
+            return false;
 
         foreach (var philosopher in _storage)
         {
-            isCheckAnyPhilosopher = true;
             var info = await _network.GetAction(philosopher.Uri);
 
             var iAmEating = info?.IAmEating ?? false;
@@ -57,7 +59,7 @@ public class DeadlockAnalyzer : BackgroundService, IDeadlockAnalyzer
             }
         }
 
-        return isCheckAnyPhilosopher;
+        return true;
     }
 
     public async Task Analyze(CancellationToken stoppingToken)
@@ -67,10 +69,9 @@ public class DeadlockAnalyzer : BackgroundService, IDeadlockAnalyzer
             if (await IsDeadlock())
             {
                 _logger.LogCritical("DEADLOCK DETECTED!");
-                return;
             }
 
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(2000, stoppingToken);
         }
     }
 

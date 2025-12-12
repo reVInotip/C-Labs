@@ -23,6 +23,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
     private readonly int _thinkingTime;
     private int _stateTimer;
     private CancellationToken _stoppingToken;
+    private bool _isStopRequested = false;
     private readonly Lock _lockObject = new ();
 
     public string Name { get; set; }
@@ -71,23 +72,24 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
     private void StoppingRequested(object? sender, EventArgs e)
     {
+        _logger.LogInformation("Stopping requested");
         var source = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
         source.Cancel();
+
+        _isStopRequested = true;
     }
 
     private async void SendActionToController(object? sender, EventArgs e)
     {
-        bool iAmEating;
-        lock (_lockObject)
-        {
-            iAmEating = _state == PhilosopherStates.Eating;
-        }
+        _logger.LogInformation("Send action to controller");
+        var iAmEating = _state == PhilosopherStates.Eating;
 
         await _actionChannel.Writer.WriteAsync(new PhilosopherActionItem(iAmEating));
     }
 
     private async void SendFinalStatsToController(object? sender, IChannelEventArgs e)
     {
+        _logger.LogInformation("Send final stats to controller");
         double simulationTime = ((ChannelScoresEvent)e).SimulationTime;
         var item = new PhilosopherToControllerChannelItem(
             GetScoreString(simulationTime),
@@ -98,14 +100,11 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
     private async void SendInfoToController(object? sender, EventArgs e)
     {
-        PhilosopherToControllerChannelItem item;
-        lock (_lockObject)
-        {
-            item = new PhilosopherToControllerChannelItem(
-                GetInfoString(),
-                Id
-            );
-        }
+        _logger.LogInformation("Send info to controller");
+        var item = new PhilosopherToControllerChannelItem(
+            GetInfoString(),
+            Id
+        );
 
         await _channelToManager.Writer.WriteAsync(item);
     }
@@ -143,20 +142,17 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         return result;
     }
 
-    public bool IsEating()
-    {
-        lock (_lockObject)
-        {
-            return _state == PhilosopherStates.Eating;
-        }
-    }
-
     private async Task PreRunInitialization()
     {
-        var registrationInfo = await _registration.Registration();
+        var registrationInfo = await _registration.Registration(Name);
         Id = registrationInfo!.PhilosopherId;
         LeftFork.Id = registrationInfo!.LeftForkId;
         RightFork.Id = registrationInfo!.RightForkId;
+    }
+
+    private void CheckStopRequests()
+    {
+        if (_isStopRequested) throw new OperationCanceledException("Stop by manager");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -169,6 +165,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
                 {
                     while (!stoppingToken.IsCancellationRequested)
                     {
+                        CheckStopRequests();
                         await ProcessState();
                     }
                 },  stoppingToken);
@@ -177,13 +174,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         {
             _logger.LogInformation("Philosophers service shutdown!");
         }
-        catch (Exception)
-        {
-            throw new ApplicationException("Operation cancelled not normally");
-        }
         finally
         {
             await _philosopherStrategy.PutForks(this);
+            await _stoppingChannel.Writer.WriteAsync(new ApplicationStopItem());
         }
 
         return;
@@ -257,8 +251,6 @@ public class PhilosopherService : BackgroundService, IPhilosopher
                     _stateTimer = 0;
                 }
             }
-
-            await _philosopherStrategy.UnlockForks(this);
         }
     }
 
@@ -282,7 +274,6 @@ public class PhilosopherService : BackgroundService, IPhilosopher
                     _stateTimer = 0;
                 }
             }
-            await _philosopherStrategy.UnlockForks(this);
         }
     }
 
@@ -306,8 +297,6 @@ public class PhilosopherService : BackgroundService, IPhilosopher
                     _stateTimer = 0;
                 }
             }
-
-            await _philosopherStrategy.UnlockForks(this);
         }
     }
 

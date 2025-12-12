@@ -8,7 +8,7 @@ using Interface;
 using Services.Channels.Events;
 using Services;
 using DataContracts;
-using Core.Models.Utils;
+using Microsoft.Extensions.Options;
 
 namespace Core.Models;
 
@@ -18,16 +18,18 @@ public class Waiter : BackgroundService, IWaiter
     private readonly IChannel<PhilosopherWithForksIdsChannelItem> _registrationChannel;
     private readonly IChannel<CommandAnswerChannelItem> _commandAnswerChannel;
     private readonly IChannel<ForkCommandWithIdChannelItem> _commandChannel;
-    private readonly IForksFactory _forksFactory;
+    private readonly IPhilosophersFactory _philosophersFactory;
     private readonly ILogger<Waiter> _logger;
+    private readonly int _countPhilosophers = 0;
 
     public Waiter
     (  
         IChannel<PhilosopherWithForksIdsChannelItem> registrationChannel,
         IChannel<CommandAnswerChannelItem> commandAnswerChannel,
         IChannel<ForkCommandWithIdChannelItem> commandChannel,
+        IOptions<ServicesConfigurations> servicesOptions,
         ILogger<Waiter> logger,
-        IForksFactory forksFactory,
+        IPhilosophersFactory philosophersFactory,
         PhilosophersStorage storage
     )
     {
@@ -35,20 +37,21 @@ public class Waiter : BackgroundService, IWaiter
         _commandAnswerChannel = commandAnswerChannel;
         _commandChannel = commandChannel;
         _logger = logger;
-        _forksFactory = forksFactory;
+        _philosophersFactory = philosophersFactory;
         _storage = storage;
+        _countPhilosophers = servicesOptions.Value.CountPhilosophers;
 
         registrationChannel.SendMeItemBy += PhilosopherWantToRegister;
     }
 
     public void PhilosopherWantToRegister(object? sender, IChannelEventArgs data)
     {
+        _logger.LogInformation("Registration handler");
+
         var name = ((ChannelRegistrationEvent)data).Name;
         var uri =((ChannelRegistrationEvent)data).Uri;
 
-        var philosopher = IPhilosopher.Create();
-        philosopher.LeftFork = _forksFactory.Create();
-        philosopher.RightFork = _forksFactory.Create();
+        var philosopher = _philosophersFactory.Create();
         philosopher.Name = name;
         philosopher.Uri = uri;
 
@@ -69,6 +72,9 @@ public class Waiter : BackgroundService, IWaiter
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                if (_storage.Count < _countPhilosophers)
+                    continue;
+
                 var command = await _commandChannel.Reader.ReadAsync(stoppingToken);
                 var philosopher = _storage.Get(command.PhilosopherId);
 
@@ -83,6 +89,7 @@ public class Waiter : BackgroundService, IWaiter
                 switch (command.Command)
                 {
                     case ForkCommandsDto.Lock:
+                        //_logger.LogWarning(command.Command.ToString());
                         fork.TryLock(philosopher);
 
                         await _commandAnswerChannel.Writer.WriteAsync(
@@ -90,6 +97,7 @@ public class Waiter : BackgroundService, IWaiter
                             stoppingToken);
                         break;
                     case ForkCommandsDto.Take:
+                        //_logger.LogWarning(command.Command.ToString());
                         fork.TryTake(philosopher);
 
                         await _commandAnswerChannel.Writer.WriteAsync(
@@ -97,9 +105,11 @@ public class Waiter : BackgroundService, IWaiter
                             stoppingToken);
                         break;
                     case ForkCommandsDto.Put:
+                        //_logger.LogWarning(command.Command.ToString());
                         fork.Put();
                         break;
                     case ForkCommandsDto.Unlock:
+                        //_logger.LogWarning(command.Command.ToString());
                         fork.UnlockFork();
                         break;
                 }

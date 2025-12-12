@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DataContracts;
+namespace Interface;
 
-public class PhilosopherAction
+public interface IPhilosophersFactory
 {
-    public bool IAmEating { get; set; }
+    IPhilosopher Create();
 }

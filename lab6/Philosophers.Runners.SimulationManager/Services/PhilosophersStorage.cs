@@ -10,33 +10,25 @@ namespace Services;
 
 public class PhilosophersStorage : IEnumerable<IPhilosopher>
 {
-    private readonly List<IPhilosopher> _philosophers = [];
+    private readonly Dictionary<int, IPhilosopher> _philosophers = [];
     private ReaderWriterLockSlim _listLock = new();
+
+    public int Count => _philosophers.Count;
 
     public void Insert(int index, IPhilosopher item)
     {
         _listLock.EnterWriteLock();
-        try
-        {
-            _philosophers.Insert(index, item);
-        }
-        finally
-        {
-            _listLock.ExitWriteLock();
-        }
+        _philosophers.Add(index, item);
+        _listLock.ExitWriteLock();
     }
 
     public IPhilosopher Get(int index)
     {
         _listLock.EnterReadLock();
-        try
-        {
-            return _philosophers[index];
-        }
-        finally
-        {
-            _listLock.ExitReadLock();
-        }
+        var item = _philosophers[index];
+        _listLock.ExitReadLock();
+
+        return item;
     }
 
     public IEnumerator<IPhilosopher> GetEnumerator()
@@ -44,7 +36,7 @@ public class PhilosophersStorage : IEnumerable<IPhilosopher>
         List<IPhilosopher> snapshot;
 
         _listLock.EnterWriteLock();
-        snapshot = new List<IPhilosopher>(_philosophers);
+        snapshot = new List<IPhilosopher>(_philosophers.Values);
         _listLock.ExitWriteLock();
 
         foreach (var p in snapshot)

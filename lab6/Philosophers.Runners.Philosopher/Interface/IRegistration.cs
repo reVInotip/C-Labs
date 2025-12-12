@@ -8,5 +8,5 @@ namespace Interface;
 
 public interface IRegistration
 {
-    Task<PhilosopherWithForksIds?> Registration();
+    Task<PhilosopherWithForksIds?> Registration(string name);
 }
