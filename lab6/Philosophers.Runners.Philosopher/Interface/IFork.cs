@@ -8,8 +8,8 @@ namespace Interface;
 public interface IFork
 {
     int Id { get; set; }
-    Task<bool> TryTake(IPhilosopher philosopher);
-    Task<bool> TryLock(IPhilosopher philosopher);
-    Task UnlockFork(IPhilosopher philosopher);
-    Task Put(IPhilosopher philosopher);
+    Task Take(IPhilosopher philosopher, CancellationToken token);
+    Task Lock(IPhilosopher philosopher, CancellationToken token);
+    Task UnlockFork(IPhilosopher philosopher, CancellationToken token);
+    Task Put(IPhilosopher philosopher, CancellationToken token);
 }

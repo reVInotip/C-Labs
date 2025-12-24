@@ -6,4 +6,4 @@ using InterfaceContracts.Channel;
 
 namespace Services.Channels.Items;
 
-public record CommandAnswerChannelItem(bool Ok) : IChannelItem;
+public record CommandAnswerChannelItem(int PhilosopherId, bool Ok) : IChannelItem;

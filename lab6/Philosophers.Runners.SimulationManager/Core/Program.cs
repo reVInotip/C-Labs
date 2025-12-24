@@ -26,6 +26,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient("philosopher-client", cfg =>
 {
+    string uri = builder.Configuration["COORDINATOR_URI"]!;
+    cfg.BaseAddress = new Uri(uri);
     cfg.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
@@ -38,17 +40,15 @@ builder.Services.AddSingleton<IChannel<ForkCommandWithIdChannelItem>,
 
 builder.Services.AddSingleton<ILogger<Waiter>, Logger<Waiter>>();
 builder.Services.AddSingleton<ILogger<SimulationManager>, Logger<SimulationManager>>();
-builder.Services.AddSingleton<ILogger<DeadlockAnalyzer>, Logger<DeadlockAnalyzer>>();
 
 builder.Services.AddSingleton<CompletionCoordinator>();
-builder.Services.AddSingleton<IPhilosopherNetwork, PhilosopherServiceNetwork>();
+builder.Services.AddSingleton<ICoordinatorNetwork, CoordinatorServiceNetwork>();
 builder.Services.AddSingleton<PhilosophersStorage>();
 
 builder.Services.AddTransient<IForksFactory, ForksFactory>();
 builder.Services.AddSingleton<IPhilosophersFactory, PhilosophersFactory>();
 
 builder.Services.AddHostedService<Waiter>();
-builder.Services.AddHostedService<DeadlockAnalyzer>();
 builder.Services.AddHostedService<SimulationManager>();
 
 builder.Services.Configure<SimulationManagerConfiguration>(

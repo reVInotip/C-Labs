@@ -6,89 +6,54 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using DataContracts;
 using Interface;
+using MassTransit;
 using Microsoft.Extensions.Options;
 
 namespace Services.Network;
 
-public class ForkService(IHttpClientFactory client) : IFork
+public class ForkService(IBus bus) : IFork
 {
-    private readonly HttpClient _client = client.CreateClient("fork-client");
+    private readonly IBus _bus = bus;
 
     public int Id { get; set; }
 
-    public async Task Put(IPhilosopher philosopher)
+    public async Task Put(IPhilosopher philosopher, CancellationToken token)
     {
-        var forecast = new ForkCommandWithIdDto
+        await _bus.Publish(new ForkCommandWithIdDto
         {
             ForkCommands = ForkCommandsDto.Put,
             PhilosopherId = philosopher.Id,
             ForkId = Id
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(forecast),
-            Encoding.UTF8, "application/json"
-        );
-        await _client.PostAsync("put-or-unlock-fork", content);
+        }, token);
     }
 
-    public async Task<bool> TryTake(IPhilosopher philosopher)
+    public async Task Take(IPhilosopher philosopher, CancellationToken token)
     {
-        var forecast = new ForkCommandWithIdDto
+        await _bus.Publish(new ForkCommandWithIdDto
         {
             ForkCommands = ForkCommandsDto.Take,
             PhilosopherId = philosopher.Id,
             ForkId = Id
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(forecast),
-            Encoding.UTF8, "application/json"
-        );
-        var response = await _client.PostAsync("lock-or-take-fork", content);
-
-        using var stream = await response.Content.ReadAsStreamAsync();
-        var data = await JsonSerializer.DeserializeAsync<bool>(
-            stream,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        return data;
+        }, token);
     }
 
-    public async Task<bool> TryLock(IPhilosopher philosopher)
+    public async Task Lock(IPhilosopher philosopher, CancellationToken token)
     {
-        var forecast = new ForkCommandWithIdDto
+        await _bus.Publish(new ForkCommandWithIdDto
         {
             ForkCommands = ForkCommandsDto.Lock,
             PhilosopherId = philosopher.Id,
             ForkId = Id
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(forecast),
-            Encoding.UTF8, "application/json"
-        );
-        var response = await _client.PostAsync("lock-or-take-fork", content);
-
-        using var stream = await response.Content.ReadAsStreamAsync();
-        var data = await JsonSerializer.DeserializeAsync<bool>(
-            stream,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        return data;
+        }, token);
     }
 
-    public async Task UnlockFork(IPhilosopher philosopher)
+    public async Task UnlockFork(IPhilosopher philosopher, CancellationToken token)
     {
-        var forecast = new ForkCommandWithIdDto
+        await _bus.Publish(new ForkCommandWithIdDto
         {
             ForkCommands = ForkCommandsDto.Unlock,
             PhilosopherId = philosopher.Id,
             ForkId = Id
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(forecast),
-            Encoding.UTF8, "application/json"
-        );
-        await _client.PostAsync("put-or-unlock-fork", content);
+        }, token);
     }
 }

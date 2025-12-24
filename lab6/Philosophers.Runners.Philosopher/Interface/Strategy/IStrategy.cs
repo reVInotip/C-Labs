@@ -8,12 +8,13 @@ namespace Interface.Strategy;
 
 public interface IStrategy
 {
-    Task<ForkType> TakeFork(IPhilosopher philosopher);
-    Task<bool> LockFork(IPhilosopher philosopher);
-    Task<bool> LockRightFork(IPhilosopher philosopher);
-    Task<bool> LockLeftFork(IPhilosopher philosopher);
-    Task<bool> TakeRightFork(IPhilosopher philosopher);
-    Task<bool> TakeLeftFork(IPhilosopher philosopher);
-    Task UnlockForks(IPhilosopher philosopher);
-    Task PutForks(IPhilosopher philosopher);
+    Task TakeFork(IPhilosopher philosopher, CancellationToken token);
+    Task LockFork(IPhilosopher philosopher, CancellationToken token);
+    Task LockRightFork(IPhilosopher philosopher, CancellationToken token);
+    Task LockLeftFork(IPhilosopher philosopher, CancellationToken token);
+    Task TakeRightFork(IPhilosopher philosopher, CancellationToken token);
+    Task TakeLeftFork(IPhilosopher philosopher, CancellationToken token);
+    Task UnlockForks(IPhilosopher philosopher, CancellationToken token);
+    Task PutForks(IPhilosopher philosopher, CancellationToken token);
+    bool IsLeftHanded();
 }

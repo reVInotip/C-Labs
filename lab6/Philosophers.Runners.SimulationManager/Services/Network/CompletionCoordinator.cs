@@ -13,13 +13,13 @@ public class CompletionCoordinator
     private readonly PhilosophersStorage _storage;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<CompletionCoordinator> _logger;
-    private readonly IPhilosopherNetwork _network;
+    private readonly ICoordinatorNetwork _network;
     private int _activeServices = 0;
 
     public CompletionCoordinator(
         IHostApplicationLifetime lifetime,
         PhilosophersStorage storage,
-        IPhilosopherNetwork network,
+        ICoordinatorNetwork network,
         ILogger<CompletionCoordinator> logger)
     {
         _storage = storage;
@@ -42,8 +42,10 @@ public class CompletionCoordinator
 
             foreach (var philosopher in _storage)
             {
-                await _network.Stop(philosopher.Uri);
+                await _network.Stop(philosopher.OriginUri);
             }
+
+            await _network.Stop();
             _lifetime.StopApplication();
         }
     }

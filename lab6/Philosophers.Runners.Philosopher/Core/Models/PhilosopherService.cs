@@ -13,6 +13,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
     private readonly IStrategy _philosopherStrategy;
     private readonly ILogger<PhilosopherService> _logger;
     private readonly IChannel<PhilosopherToControllerChannelItem> _channelToManager;
+    private readonly IChannel<CommandExecutionResultItem> _commandsChannel;
     private readonly IChannel<PhilosopherActionItem> _actionChannel;
     private readonly IRegistration _registration;
     private readonly IChannel<ApplicationStopItem> _stoppingChannel;
@@ -40,6 +41,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         IOptions<PhilosopherConfiguration> options,
         IChannel<PhilosopherToControllerChannelItem> channelToManager,
         IChannel<PhilosopherActionItem> actionChannel,
+        IChannel<CommandExecutionResultItem> commandsChannel,
         IRegistration registration,
         IChannel<ApplicationStopItem> stoppingChannel,
         IEnumerable<IFork> forks)
@@ -56,6 +58,8 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
         _stoppingChannel = stoppingChannel;
         _stoppingChannel.SendMeItem += StoppingRequested;
+
+        _commandsChannel = commandsChannel;
 
         _registration = registration;
 
@@ -176,7 +180,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         }
         finally
         {
-            await _philosopherStrategy.PutForks(this);
+            await _philosopherStrategy.PutForks(this, stoppingToken);
             await _stoppingChannel.Writer.WriteAsync(new ApplicationStopItem());
         }
 
@@ -205,6 +209,22 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         }
     }
 
+    private async Task<bool> CheckCommandResult()
+    {
+        CommandExecutionResultItem result;
+        while (true)
+        {
+            result = await _commandsChannel.Reader.ReadAsync();
+            _logger.LogDebug($"Receive command: {result} on philosopher {Id}-{Name}");
+
+            if (result.PhilosopherId == Id)
+            {
+                _logger.LogDebug("Return command result");
+                return result.ok;
+            }
+        }
+    }
+
     private async Task ProcessThinkingState()
     {
         while (_stateTimer < _thinkingTime)
@@ -223,7 +243,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
     private async Task ProcessHungryState()
     {
-        if (await _philosopherStrategy.LockFork(this))
+        await _philosopherStrategy.LockFork(this, _stoppingToken);
+        var result = await CheckCommandResult();
+
+        if (result)
         {
             await Task.Delay(_takeForkTime);
 
@@ -233,9 +256,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
             }
             Interlocked.Add(ref _stateTimer, _takeForkTime);
 
-            var type = await _philosopherStrategy.TakeFork(this);
+            await _philosopherStrategy.TakeFork(this, _stoppingToken);
+            result = await CheckCommandResult();
 
-            if (type == DataContracts.ForkType.Left)
+            if (result && _philosopherStrategy.IsLeftHanded())
             {
                 lock (_lockObject)
                 {
@@ -243,7 +267,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
                     _stateTimer = 0;
                 }
             }
-            else if (type == DataContracts.ForkType.Right)
+            else if (result)
             {
                 lock (_lockObject)
                 {
@@ -256,7 +280,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
     private async Task ProcessTakingLeftForkState()
     {
-        if (await _philosopherStrategy.LockRightFork(this))
+        await _philosopherStrategy.LockRightFork(this, _stoppingToken);
+        var result = await CheckCommandResult();
+
+        if (result)
         {
             await Task.Delay(_takeForkTime);
             
@@ -266,7 +293,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
             }
             Interlocked.Add(ref _stateTimer, _takeForkTime);
 
-            if (await _philosopherStrategy.TakeRightFork(this))
+            await _philosopherStrategy.TakeRightFork(this, _stoppingToken);
+            result = await CheckCommandResult();
+
+            if (result)
             {
                 lock (_lockObject)
                 {
@@ -279,7 +309,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
     private async Task ProcessTakingRightForkState()
     {
-        if (await _philosopherStrategy.LockLeftFork(this))
+        await _philosopherStrategy.LockLeftFork(this, _stoppingToken);
+        var result = await CheckCommandResult();
+
+        if (result)
         {
             await Task.Delay(_takeForkTime);
 
@@ -289,7 +322,10 @@ public class PhilosopherService : BackgroundService, IPhilosopher
             }
             Interlocked.Add(ref _stateTimer, _takeForkTime);
 
-            if (await _philosopherStrategy.TakeLeftFork(this))
+            await _philosopherStrategy.TakeLeftFork(this, _stoppingToken);
+            result = await CheckCommandResult();
+
+            if (result)
             {
                 lock (_lockObject)
                 {
@@ -308,14 +344,18 @@ public class PhilosopherService : BackgroundService, IPhilosopher
             Interlocked.Add(ref _stateTimer, _eatingTime / 8);
         }
 
-        await _philosopherStrategy.PutForks(this);
-
-        lock (_lockObject)
+        await _philosopherStrategy.PutForks(this, _stoppingToken);
+        var result = await CheckCommandResult();
+       
+        if (result)
         {
-            CountEatingFood++;
+            lock (_lockObject)
+            {
+                CountEatingFood++;
 
-            _state = PhilosopherStates.Thinking;
-            _stateTimer = 0;
+                _state = PhilosopherStates.Thinking;
+                _stateTimer = 0;
+            }
         }
     }
 }

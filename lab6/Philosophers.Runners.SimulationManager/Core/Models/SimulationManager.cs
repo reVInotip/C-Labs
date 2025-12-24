@@ -16,11 +16,12 @@ public class SimulationManager : BackgroundService, ISimulationManager
     private readonly PhilosophersStorage _storage;
     private readonly ILogger<SimulationManager> _logger;
     private readonly CompletionCoordinator _coordinator;
-    private readonly IPhilosopherNetwork _network;
+    private readonly ICoordinatorNetwork _network;
     private readonly IForksFactory _forksFactory;
     private int _step = 0;
     private readonly Stopwatch _stopwatch = new();
     private readonly int _steps;
+    private readonly int _duration;
     private readonly int _countPhilosophers = 0;
 
     public SimulationManager
@@ -29,7 +30,7 @@ public class SimulationManager : BackgroundService, ISimulationManager
         IOptions<ServicesConfigurations> servicesOptions,
         ILogger<SimulationManager> logger,
         IForksFactory forksFactory,
-        IPhilosopherNetwork network,
+        ICoordinatorNetwork network,
         PhilosophersStorage storage,
         CompletionCoordinator coordinator
     )
@@ -37,6 +38,7 @@ public class SimulationManager : BackgroundService, ISimulationManager
         _logger = logger;
         _coordinator = coordinator;
         _steps = options.Value.Steps;
+        _duration = options.Value.Duration;
         _countPhilosophers = servicesOptions.Value.CountPhilosophers;
         _forksFactory = forksFactory;
         _storage = storage;
@@ -50,7 +52,7 @@ public class SimulationManager : BackgroundService, ISimulationManager
 
         foreach (var philosopher in _storage)
         {
-            var info = await _network.GetInfo(philosopher.Uri);
+            var info = await _network.GetInfo(philosopher.OriginUri);
             Console.WriteLine(info?.Info);
 
             Console.WriteLine(" |- Left Fork: " + philosopher.LeftFork.GetInfoString());
@@ -67,7 +69,7 @@ public class SimulationManager : BackgroundService, ISimulationManager
             _stopwatch.Start();
             while (!stoppingToken.IsCancellationRequested && _step < _steps)
             {
-                await Task.Delay(2000, stoppingToken);
+                await Task.Delay(_duration, stoppingToken);
                 if (_storage.Count < _countPhilosophers)
                     continue;
 
@@ -93,7 +95,7 @@ public class SimulationManager : BackgroundService, ISimulationManager
 
             foreach (var philosopher in _storage)
             {
-                var info = await _network.GetStats(philosopher.Uri, _stopwatch.ElapsedMilliseconds);
+                var info = await _network.GetStats(philosopher.OriginUri, _stopwatch.ElapsedMilliseconds);
                 Console.WriteLine(info?.Info);
 
                 Console.WriteLine(" |- Left Fork: " + philosopher.LeftFork.GetScoreString(_stopwatch.ElapsedMilliseconds));

@@ -12,5 +12,5 @@ public class Philosopher : IPhilosopher
     public required string Name { get; set; }
     public required IFork LeftFork { get; set; }
     public required IFork RightFork { get; set; }
-    public required string Uri { get; set; }
+    public required string OriginUri { get; set; }
 }

@@ -8,4 +8,5 @@ namespace Core;
 public class SimulationManagerConfiguration
 {
     public int Steps { get; set; }
+    public int Duration { get; set; }
 }

@@ -6,4 +6,4 @@ using InterfaceContracts.Channel;
 
 namespace Services.Channels.Events;
 
-public record ChannelRegistrationEvent(string Name, string Uri) : IChannelEventArgs;
+public record ChannelRegistrationEvent(string Name, string OriginUri) : IChannelEventArgs;

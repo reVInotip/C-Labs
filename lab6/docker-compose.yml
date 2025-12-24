@@ -8,13 +8,60 @@ services:
        - 8080:8080
     environment:
       - ASPNETCORE_URLS=http://+:8080
+      - COORDINATOR_URI=http://coordinator-service:8080/Coordinator/
       - SimulationManagerConfiguration__Steps=15
+      - SimulationManagerConfiguration__Duration=2000
       - ServicesConfigurations__CountPhilosophers=5
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/SimulationManager/health"]
       interval: 5s
       timeout: 2s
       retries: 3
+    depends_on:
+      coordinator-service:
+        condition: service_healthy
+  
+  coordinator-service:
+    build:
+      dockerfile: ./Philosophers.Runners.Coordinator/Dockerfile
+      context: .
+    container_name: coordinator-service
+    ports:
+       - 5000:8080
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/Coordinator/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672" # Standard AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=myuser
+      - RABBITMQ_DEFAULT_PASS=mypassword
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq # Persist data
+      - rabbitmq_log:/var/log/rabbitmq   # Persist logs
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 2
+      start_period: 40s
 
   philosopher-plato:
     build:
@@ -22,11 +69,19 @@ services:
       context: .
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Plato"
+      - PhilosopherConfiguration__ServiceName=plato-service
       - ServicesConfiguration__IsLeftHanded=true
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
     depends_on:
       manager-service:
+        condition: service_healthy
+      coordinator-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - 8081:8080
@@ -37,11 +92,19 @@ services:
       context: .
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Marks"
+      - PhilosopherConfiguration__ServiceName=marks-service
       - ServicesConfiguration__IsLeftHanded=false
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
     depends_on:
       manager-service:
+        condition: service_healthy
+      coordinator-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - 8082:8080
@@ -52,11 +115,19 @@ services:
       context: .
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Engels"
+      - PhilosopherConfiguration__ServiceName=engels-service
       - ServicesConfiguration__IsLeftHanded=false
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
     depends_on:
       manager-service:
+        condition: service_healthy
+      coordinator-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - 8083:8080
@@ -67,11 +138,19 @@ services:
       context: .
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Socrates"
+      - PhilosopherConfiguration__ServiceName=socrates-service
       - ServicesConfiguration__IsLeftHanded=false
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
     depends_on:
       manager-service:
+        condition: service_healthy
+      coordinator-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - 8084:8080
@@ -82,11 +161,23 @@ services:
       context: .
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      - HOST_URI=http://manager-service:8080/SimulationManager/
+      - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Aristotel"
+      - PhilosopherConfiguration__ServiceName=aristotel-service
       - ServicesConfiguration__IsLeftHanded=false
+      - BROKER_HOST=rabbitmq
+      - BROKER_PASSWORD=mypassword
+      - BROKER_USER=myuser
     depends_on:
       manager-service:
         condition: service_healthy
+      coordinator-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - 8085:8080
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_log:

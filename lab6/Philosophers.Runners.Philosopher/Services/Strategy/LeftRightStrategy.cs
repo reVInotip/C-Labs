@@ -5,73 +5,65 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Interface;
 using Interface.Strategy;
-using DataContracts;
 
 namespace Services.Strategy;
 
-public class LeftRightStrategy : ILeftRightStrategy
+public class LeftRightStrategy(
+    IOptions<ServicesConfiguration> options
+) : ILeftRightStrategy
 {
-    private bool _isLeftHanded;
+    private readonly bool _isLeftHanded = options.Value.IsLeftHanded;
 
-    public LeftRightStrategy(IOptions<ServicesConfiguration> options)
+    public bool IsLeftHanded()
     {
-        _isLeftHanded = options.Value.IsLeftHanded;
+        return _isLeftHanded;
     }
 
-    public async Task<ForkType> TakeFork(IPhilosopher philosopher)
+    public async Task TakeFork(IPhilosopher philosopher, CancellationToken token)
     {   
-        if (_isLeftHanded && await philosopher.LeftFork.TryTake(philosopher))
-        {
-            return ForkType.Left;
-        }
-
-        if (await philosopher.RightFork.TryTake(philosopher))
-        {
-            return ForkType.Right;
-        }
-
-        return ForkType.None;
+        if (_isLeftHanded)
+            await philosopher.LeftFork.Take(philosopher, token);
+        else
+            await philosopher.RightFork.Take(philosopher, token);
     }
 
-    public async Task<bool> TakeRightFork(IPhilosopher philosopher)
+    public async Task TakeRightFork(IPhilosopher philosopher, CancellationToken token)
     {
-        return await philosopher.RightFork.TryTake(philosopher);
+        await philosopher.RightFork.Take(philosopher, token);
     }
 
-    public async Task<bool> TakeLeftFork(IPhilosopher philosopher)
+    public async Task TakeLeftFork(IPhilosopher philosopher, CancellationToken token)
     {
-        return await philosopher.LeftFork.TryTake(philosopher);
+        await philosopher.LeftFork.Take(philosopher, token);
     }
 
-    public async Task<bool> LockFork(IPhilosopher philosopher)
+    public async Task LockFork(IPhilosopher philosopher, CancellationToken token)
     {
         if (_isLeftHanded)
-        {
-            return await philosopher.LeftFork.TryLock(philosopher);
-        }
-
-        return await philosopher.RightFork.TryLock(philosopher);
+            await philosopher.LeftFork.Lock(philosopher, token);
+        else
+            await philosopher.RightFork.Lock(philosopher, token);
     }
 
-    public async Task<bool> LockRightFork(IPhilosopher philosopher)
+    public async Task LockRightFork(IPhilosopher philosopher, CancellationToken token)
     {
-        return await philosopher.RightFork.TryLock(philosopher);
+        await philosopher.RightFork.Lock(philosopher, token);
     }
 
-    public async Task<bool> LockLeftFork(IPhilosopher philosopher)
+    public async Task LockLeftFork(IPhilosopher philosopher, CancellationToken token)
     {
-        return await philosopher.LeftFork.TryLock(philosopher);
+        await philosopher.LeftFork.Lock(philosopher, token);
     }
 
-    public async Task UnlockForks(IPhilosopher philosopher)
+    public async Task UnlockForks(IPhilosopher philosopher, CancellationToken token)
     {
-        await philosopher.LeftFork.UnlockFork(philosopher);
-        await philosopher.RightFork.UnlockFork(philosopher);
+        await philosopher.LeftFork.UnlockFork(philosopher, token);
+        await philosopher.RightFork.UnlockFork(philosopher, token);
     }
 
-    public async Task PutForks(IPhilosopher philosopher)
+    public async Task PutForks(IPhilosopher philosopher, CancellationToken token)
     {
-        await philosopher.LeftFork.Put(philosopher);
-        await philosopher.RightFork.Put(philosopher);
+        await philosopher.LeftFork.Put(philosopher, token);
+        await philosopher.RightFork.Put(philosopher, token);
     }
 }

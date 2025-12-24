@@ -12,5 +12,5 @@ public interface IPhilosopher
     string Name { get; set; }
     IFork LeftFork { get; set; }
     IFork RightFork { get; set; }
-    string Uri { get; set; }
+    string OriginUri { get; set; }
 }

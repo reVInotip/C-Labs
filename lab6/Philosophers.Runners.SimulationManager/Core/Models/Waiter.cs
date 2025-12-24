@@ -22,6 +22,7 @@ public class Waiter : BackgroundService, IWaiter
     private readonly ILogger<Waiter> _logger;
     private readonly int _countPhilosophers = 0;
 
+
     public Waiter
     (  
         IChannel<PhilosopherWithForksIdsChannelItem> registrationChannel,
@@ -49,11 +50,11 @@ public class Waiter : BackgroundService, IWaiter
         _logger.LogInformation("Registration handler");
 
         var name = ((ChannelRegistrationEvent)data).Name;
-        var uri =((ChannelRegistrationEvent)data).Uri;
+        var originUri =((ChannelRegistrationEvent)data).OriginUri;
 
         var philosopher = _philosophersFactory.Create();
         philosopher.Name = name;
-        philosopher.Uri = uri;
+        philosopher.OriginUri = originUri;
 
         _storage.Insert(philosopher.Id, philosopher);
 
@@ -76,7 +77,9 @@ public class Waiter : BackgroundService, IWaiter
                     continue;
 
                 var command = await _commandChannel.Reader.ReadAsync(stoppingToken);
+                _logger.LogDebug($"{command}");
                 var philosopher = _storage.Get(command.PhilosopherId);
+                _logger.LogDebug($"Found philosopher with {philosopher.Id} = {philosopher.Name}");
 
                 IFork fork;
                 if (philosopher.LeftFork.Id == command.ForkId)
@@ -86,31 +89,53 @@ public class Waiter : BackgroundService, IWaiter
                 else
                     throw new ApplicationException("Bad fork id in command");
 
+                CommandAnswerChannelItem item;
+
                 switch (command.Command)
                 {
                     case ForkCommandsDto.Lock:
-                        //_logger.LogWarning(command.Command.ToString());
                         fork.TryLock(philosopher);
 
+                        item = new CommandAnswerChannelItem(philosopher.Id, fork.IsLockedBy(philosopher));
+
+                        _logger.LogDebug($"Result of command {command}: {item}");
+
                         await _commandAnswerChannel.Writer.WriteAsync(
-                            new CommandAnswerChannelItem(fork.IsLockedBy(philosopher)),
+                            item,
                             stoppingToken);
                         break;
                     case ForkCommandsDto.Take:
-                        //_logger.LogWarning(command.Command.ToString());
                         fork.TryTake(philosopher);
 
+                        item = new CommandAnswerChannelItem(philosopher.Id, fork.IsTakenBy(philosopher));
+
+                        _logger.LogDebug($"Result of command {command}: {item}");
+
                         await _commandAnswerChannel.Writer.WriteAsync(
-                            new CommandAnswerChannelItem(fork.IsTakenBy(philosopher)),
+                            item,
                             stoppingToken);
                         break;
                     case ForkCommandsDto.Put:
-                        //_logger.LogWarning(command.Command.ToString());
                         fork.Put();
+
+                        item = new CommandAnswerChannelItem(philosopher.Id, !fork.IsTakenBy(philosopher));
+
+                        _logger.LogDebug($"Result of command {command}: {item}");
+
+                        await _commandAnswerChannel.Writer.WriteAsync(
+                            item,
+                            stoppingToken);
                         break;
                     case ForkCommandsDto.Unlock:
-                        //_logger.LogWarning(command.Command.ToString());
                         fork.UnlockFork();
+
+                        item = new CommandAnswerChannelItem(philosopher.Id, !fork.IsLockedBy(philosopher));
+
+                        _logger.LogDebug($"Result of command {command}: {item}");
+
+                        await _commandAnswerChannel.Writer.WriteAsync(
+                            item,
+                            stoppingToken);
                         break;
                 }
             }

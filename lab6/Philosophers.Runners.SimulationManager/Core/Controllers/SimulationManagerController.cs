@@ -22,14 +22,12 @@ public class SimulationManagerController(
     private readonly IChannel<CommandAnswerChannelItem> _commandAnswerChannel = commandAnswerChannel;
 
     [HttpPost("register-me")]
-    public async Task<PhilosopherWithForksIds> RegisterPhilosopher([FromForm] string name)
+    public async Task<PhilosopherWithForksIds> RegisterPhilosopher([FromBody] RegistrationDto registrationDto)
     {
         var clientIp = HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString();
 
-        var fullUri = $"{Request.Scheme}://{clientIp}:8080/Philosopher/";
-        Console.WriteLine(fullUri);
-
-        _channel.NotifyWith(this, new ChannelRegistrationEvent(name, fullUri));
+        _channel.NotifyWith(this, new ChannelRegistrationEvent(
+            registrationDto.Name, registrationDto.uri));
 
         var item = await _channel.Reader.ReadAsync();
         return new PhilosopherWithForksIds
@@ -40,21 +38,8 @@ public class SimulationManagerController(
         };
     }
 
-    [HttpPost("put-or-unlock-fork")]
-    public async Task PutOrUnlockFork([FromBody] ForkCommandWithIdDto forkCommand)
-    {
-        var item = new ForkCommandWithIdChannelItem
-        (
-            forkCommand.ForkCommands,
-            forkCommand.PhilosopherId,
-            forkCommand.ForkId
-        );
-
-        await _commandChannel.Writer.WriteAsync(item);
-    }
-
-    [HttpPost("lock-or-take-fork")]
-    public async Task<bool> LockOrTakeFork([FromBody] ForkCommandWithIdDto forkCommand)
+    [HttpPost("execute-command")]
+    public async Task<bool> ExecuteCommand([FromBody] ForkCommandWithIdDto forkCommand)
     {
         var item = new ForkCommandWithIdChannelItem
         (
