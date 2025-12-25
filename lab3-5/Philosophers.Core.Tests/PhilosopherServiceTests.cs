@@ -69,10 +69,9 @@ public class PhilosopherServiceTests
             .Returns(Channel.CreateUnbounded<PhilosopherToPrinterChannelItem>().Writer);
 
         // Фабрика вилок
-        var factory = new Mock<IForksFactory<Fork>>();
+        var factory = new Mock<IForksFactory>();
         factory.SetupSequence(f => f.Create())
-            .Returns(leftFork)
-            .Returns(rightFork);
+            .Returns((leftFork, rightFork));
 
         // Логгер
         var logger = new Mock<ILogger<PhilosopherService>>();
@@ -97,7 +96,7 @@ public class PhilosopherServiceTests
             ILogger<PhilosopherService> logger,
             IStrategy strategy,
             IOptions<PhilosopherConfiguration> config,
-            IForksFactory<Fork> factory,
+            IForksFactory factory,
             IChannel<PhilosopherToAnalyzerChannelItem> analyzer,
             IChannel<PhilosopherToPrinterChannelItem> printer)
             : base(logger, strategy, config, factory, analyzer, printer)

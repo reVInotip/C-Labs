@@ -48,7 +48,7 @@ try
 
             services.AddScoped<ISimulationDatabaseProcessor, SimulationDatabaseProcessor>();
 
-            services.AddTransient<IForksFactory<Fork>, ForksFactory<Fork>>();
+            services.AddTransient<IForksFactory, ForksFactory>();
 
             services.AddHostedService<Aristotel>();
             services.AddHostedService<Engels>();

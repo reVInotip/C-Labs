@@ -39,7 +39,7 @@ public abstract class PhilosopherService : BackgroundService, IPhilosopher
         ILogger<PhilosopherService> logger,
         IStrategy philosopherStrategy,
         IOptions<PhilosopherConfiguration> options,
-        IForksFactory<Fork> forksFactory,
+        IForksFactory forksFactory,
         IChannel<PhilosopherToAnalyzerChannelItem> channelToAnalyzer,
         IChannel<PhilosopherToPrinterChannelItem> channelToPrinter)
     {
@@ -60,8 +60,9 @@ public abstract class PhilosopherService : BackgroundService, IPhilosopher
         _takeForkTime = random.Next(options.Value.TakeForkTimeMin, options.Value.TakeForkTimeMax);
         _thinkingTime = random.Next(options.Value.ThinkingTimeMin, options.Value.ThinkingTimeMax);
 
-        LeftFork = forksFactory.Create();
-        RightFork = forksFactory.Create();
+        var forks = forksFactory.Create();
+        LeftFork = forks.Item1;
+        RightFork = forks.Item2;
     }
 
     private async void SendInfoToPrinter(object? sender, EventArgs e)

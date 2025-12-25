@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 
 namespace Interface;
 
-public interface IForksFactory<T>
-    where T: class, IFork
+public interface IForksFactory
 {
-    public IFork Create();
+    (IFork, IFork) Create();
 }

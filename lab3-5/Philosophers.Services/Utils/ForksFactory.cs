@@ -4,29 +4,67 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Interface;
+using Microsoft.Extensions.Options;
 
 namespace Philosophers.Services.Utils;
 
-public class ForksFactory<T> : IForksFactory<T>
-    where T: class, IFork
+public class ForksFactory : IForksFactory
 {
-    private static IFork? _previousFork = null;
-    private static int _count = 0;
-
-    public IFork Create()
+    private readonly Type _forkType;
+    private readonly int _countPhilosophers;
+    private readonly IFork[] _forks;
+    private int _index = 0;
+    
+    public ForksFactory(IOptions<PhilosopherConfiguration> options)
     {
-        var constructor = typeof(T).GetConstructor([typeof(int)]) ?? throw new ApplicationException("Can not find valid constructor");
-        if (_previousFork == null)
+        _countPhilosophers = options.Value.CountPhilosophers;
+        _forkType = FindForkType();
+        
+        // Создаем N вилок для N философов
+        _forks = new IFork[_countPhilosophers];
+        for (int i = 0; i < _countPhilosophers; i++)
         {
-            ++_count;
-            _previousFork = (IFork) constructor.Invoke([_count]);
+            var fork = (IFork)Activator.CreateInstance(_forkType)!;
+            _forks[i] = fork;
         }
+    }
 
-        var fork = _previousFork;
+    public (IFork, IFork) Create()
+    {
+        var left = _forks[(_index + 1) % _countPhilosophers];
+        var right = _forks[_index];
+        ++_index;
+        return (left, right);
+    }
 
-        ++_count;
-        _previousFork = (IFork) constructor.Invoke([_count]);
-
-        return fork;
+    private Type FindForkType()
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        
+        foreach (var assembly in assemblies)
+        {
+            try
+            {
+                var types = assembly.GetTypes();
+                foreach (var type in types)
+                {
+                    if (typeof(IFork).IsAssignableFrom(type) 
+                        && type.IsClass 
+                        && !type.IsAbstract 
+                        && type.GetConstructor(Type.EmptyTypes) != null)
+                    {
+                        return type;
+                    }
+                }
+            }
+            catch (ReflectionTypeLoadException)
+            {
+                // Пропускаем сборки, которые не можем загрузить
+                continue;
+            }
+        }
+        
+        throw new InvalidOperationException($"No implementation of {nameof(IFork)} found in loaded assemblies");
+        //return typeof(Fork);
     }
 }

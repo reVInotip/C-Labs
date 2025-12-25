@@ -9,4 +9,5 @@ sealed public class PhilosopherConfiguration
     public int ThinkingTimeMax { get; set; }
     public int ThinkingTimeMin { get; set; }
     public int Steps { get; set; }
+    public int CountPhilosophers { get; set; }
 }

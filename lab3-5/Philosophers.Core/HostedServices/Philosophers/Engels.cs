@@ -17,7 +17,7 @@ public class Engels : PhilosopherService
         ILogger<PhilosopherService> logger,
         IStrategy philosopherStrategy,
         IOptions<PhilosopherConfiguration> options,
-        IForksFactory<Fork> forksFactory,
+        IForksFactory forksFactory,
         IChannel<PhilosopherToAnalyzerChannelItem> channelToAnalyzer,
         IChannel<PhilosopherToPrinterChannelItem> channelToPrinter)
     : base(logger, philosopherStrategy, options, forksFactory, channelToAnalyzer, channelToPrinter)
