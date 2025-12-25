@@ -81,7 +81,7 @@ public class PhilosophersStates(
                     return false;
                 }
 
-                _logger.LogDebug($"Unexpected command: {command} from Philosopher with id {philosopherId}");
+                _logger.LogWarning($"Unexpected command: {command} from Philosopher with id {philosopherId}");
                 return false;
             case ForkCommandsDto.Take:
                 _logger.LogDebug($"Start processing command: {command}");
@@ -97,7 +97,7 @@ public class PhilosophersStates(
                     return ok;
                 }
 
-                _logger.LogDebug($"Unexpected command: {command} from Philosopher with id {philosopherId}");
+                _logger.LogWarning($"Unexpected command: {command} from Philosopher with id {philosopherId}");
                 return false;
             case ForkCommandsDto.Put or ForkCommandsDto.Unlock:
                 _logger.LogDebug($"Start processing command: {command}");
@@ -114,7 +114,7 @@ public class PhilosophersStates(
                     return ok;
                 }
 
-                _logger.LogDebug($"Unexpected command: {command} from Philosopher with id {philosopherId}");
+                _logger.LogWarning($"Unexpected command: {command} from Philosopher with id {philosopherId}");
                 return false;
             
             default:

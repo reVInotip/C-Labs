@@ -248,6 +248,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
         if (result)
         {
+            _logger.LogDebug("Lock first fork successfully");
             await Task.Delay(_takeForkTime);
 
             lock (_lockObject)
@@ -261,6 +262,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
             if (result && _philosopherStrategy.IsLeftHanded())
             {
+                _logger.LogDebug("Take first Left fork successfully");
                 lock (_lockObject)
                 {
                     _state = PhilosopherStates.TakeLeftFork;
@@ -269,6 +271,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
             }
             else if (result)
             {
+                _logger.LogDebug("Take first Right fork successfully");
                 lock (_lockObject)
                 {
                     _state = PhilosopherStates.TakeRightFork;
@@ -285,6 +288,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
         if (result)
         {
+            _logger.LogDebug("Lock Right fork successfully");
             await Task.Delay(_takeForkTime);
             
             lock (_lockObject)
@@ -298,6 +302,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
             if (result)
             {
+                _logger.LogDebug("Take Right fork successfully");
                 lock (_lockObject)
                 {
                     _state = PhilosopherStates.Eating;
@@ -314,6 +319,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
         if (result)
         {
+            _logger.LogDebug("Lock Left fork successfully");
             await Task.Delay(_takeForkTime);
 
             lock (_lockObject)
@@ -327,6 +333,7 @@ public class PhilosopherService : BackgroundService, IPhilosopher
 
             if (result)
             {
+                _logger.LogDebug("Take Left fork successfully");
                 lock (_lockObject)
                 {
                     _state = PhilosopherStates.Eating;
@@ -345,10 +352,12 @@ public class PhilosopherService : BackgroundService, IPhilosopher
         }
 
         await _philosopherStrategy.PutForks(this, _stoppingToken);
-        var result = await CheckCommandResult();
+        var result_first = await CheckCommandResult();
+        var result_second = await CheckCommandResult();
        
-        if (result)
+        if (result_first && result_second)
         {
+            _logger.LogDebug("Unlock forks successfully");
             lock (_lockObject)
             {
                 CountEatingFood++;

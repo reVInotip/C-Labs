@@ -160,6 +160,7 @@ services:
       dockerfile: ./Philosophers.Runners.Philosopher/Dockerfile
       context: .
     environment:
+      #- Logging__LogLevel__Default=Debug
       - ASPNETCORE_URLS=http://+:8080
       - HOST_URI=http://coordinator-service:8080/Coordinator/
       - PhilosopherConfiguration__Name="Aristotel"
