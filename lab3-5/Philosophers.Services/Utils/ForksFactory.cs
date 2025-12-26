@@ -24,7 +24,7 @@ public class ForksFactory : IForksFactory
         _forks = new IFork[_countPhilosophers];
         for (int i = 0; i < _countPhilosophers; i++)
         {
-            var fork = (IFork)Activator.CreateInstance(_forkType)!;
+            var fork = (IFork)Activator.CreateInstance(_forkType, [i])!;
             _forks[i] = fork;
         }
     }
@@ -51,7 +51,7 @@ public class ForksFactory : IForksFactory
                     if (typeof(IFork).IsAssignableFrom(type) 
                         && type.IsClass 
                         && !type.IsAbstract 
-                        && type.GetConstructor(Type.EmptyTypes) != null)
+                        && type.GetConstructor([typeof(int)]) != null)
                     {
                         return type;
                     }
