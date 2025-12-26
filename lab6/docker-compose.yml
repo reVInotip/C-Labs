@@ -29,6 +29,7 @@ services:
     ports:
        - 5000:8080
     environment:
+#      - Logging__LogLevel__Default=Information
       - ASPNETCORE_URLS=http://+:8080
       - HOST_URI=http://manager-service:8080/SimulationManager/
       - BROKER_HOST=rabbitmq

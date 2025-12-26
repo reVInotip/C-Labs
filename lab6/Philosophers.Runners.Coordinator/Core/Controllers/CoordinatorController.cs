@@ -25,12 +25,13 @@ public class CoordinatorController(
     [HttpPost("register-me")]
     public async Task<PhilosopherWithForksIds> RegisterPhilosopher([FromForm] string name)
     {
-        _logger.LogInformation("Handle registration event");
+        _logger.LogInformation($"Handle registration event from {name}");
 
         var clientIp = HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString();
 
         var originUri = $"{Request.Scheme}://{clientIp}:8080/Philosopher/";
         var result = await _retranslationService.RetranslateRegistration(name, originUri);
+        _logger.LogInformation($"Registration result {result!.PhilosopherId} {result.LeftForkId} {result.RightForkId}");
 
         _states.Add(result!.PhilosopherId, result.LeftForkId, result.RightForkId);
 

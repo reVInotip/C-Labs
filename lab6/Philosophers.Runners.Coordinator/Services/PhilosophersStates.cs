@@ -21,17 +21,35 @@ public class PhilosophersStates(
     private readonly IDeadlockAnalyzer _deadlockAnalyzer = deadlockAnalyzer;
     private readonly ILogger<PhilosophersStates> _logger = logger;
     private readonly IRetranslationService _retranslationService = retranslationService;
+    private Lock _lock = new();
 
     public void Add(int philosopherId, int leftForkId, int rightForkId)
     {
-        _thinking.Add(philosopherId, new Philosopher()
+        lock (_lock)
+        {
+            try
             {
-                Id = philosopherId,
-                LeftForkId = leftForkId,
-                RightForkId = rightForkId,
-                HavingForkId = -1,
-                TryingToTakeForkId = -1,
-            });
+                _thinking.Add(philosopherId, new Philosopher()
+                    {
+                        Id = philosopherId,
+                        LeftForkId = leftForkId,
+                        RightForkId = rightForkId,
+                        HavingForkId = -1,
+                        TryingToTakeForkId = -1,
+                    });
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                _logger.LogError($"Current exception for {philosopherId}, {leftForkId}, {rightForkId}");
+                _logger.LogError(e.Message);
+                _logger.LogError(e.StackTrace);
+
+                var inner = e.InnerException;
+                _logger.LogError("Inner exception");
+                _logger.LogError(inner?.Message);
+                _logger.LogError(inner?.StackTrace);;
+            }
+        }
     }
 
     public async Task<bool> TryToSwitchState(CommandChannelItem command)
@@ -39,16 +57,23 @@ public class PhilosophersStates(
         int philosopherId = command.PhilosopherId;
         IPhilosopher item;
         bool ok;
+        bool result = false;
 
         switch (command.Command)
         {
             case ForkCommandsDto.Lock:
                 _logger.LogDebug($"Start processing command: {command}");
-                int forkId = _thinking.ContainsKey(philosopherId) ?  command.ForkId : -1;
-                
-                if (_thinking.ContainsKey(philosopherId) || _takingFirstFork.ContainsKey(philosopherId))
+
+                int forkId = 0;
+                lock (_lock)
                 {
+                    forkId = _thinking.ContainsKey(philosopherId) ?  command.ForkId : -1;
+                    result = _thinking.ContainsKey(philosopherId) || _takingFirstFork.ContainsKey(philosopherId);
                     item = Update(philosopherId);
+                }
+                
+                if (result)
+                {
                     item!.TryingToTakeForkId = command.ForkId;
                     
                     if (_deadlockAnalyzer.CheckDeadlock(
@@ -56,7 +81,8 @@ public class PhilosophersStates(
                     {
                         _logger.LogDebug($"Command: {command} rejected by deadlock analyzer");
                         item.TryingToTakeForkId = -1;
-                        Rollback(philosopherId);
+                        lock (_lock)
+                            Rollback(philosopherId);
                         return false;
                     }
 
@@ -77,7 +103,8 @@ public class PhilosophersStates(
 
                     _logger.LogDebug($"Command: {command} rejected by manager");
                     item.TryingToTakeForkId = -1;
-                    Rollback(philosopherId);
+                    lock (_lock)
+                        Rollback(philosopherId);
                     return false;
                 }
 
@@ -85,7 +112,10 @@ public class PhilosophersStates(
                 return false;
             case ForkCommandsDto.Take:
                 _logger.LogDebug($"Start processing command: {command}");
-                if (_takingFirstFork.ContainsKey(philosopherId) || _eating.ContainsKey(philosopherId))
+
+                lock (_lock)
+                    result = _takingFirstFork.ContainsKey(philosopherId) || _eating.ContainsKey(philosopherId);
+                if (result)
                 {
                     _logger.LogDebug($"Retranslate command: {command}");
                     ok = await _retranslationService.RetranslateCommand(
@@ -101,10 +131,16 @@ public class PhilosophersStates(
                 return false;
             case ForkCommandsDto.Put or ForkCommandsDto.Unlock:
                 _logger.LogDebug($"Start processing command: {command}");
-                if (_takingFirstFork.ContainsKey(philosopherId) || _eating.ContainsKey(philosopherId))
+
+                lock (_lock)
                 {
-                    Rollback(philosopherId);
-                    
+                    result = _takingFirstFork.ContainsKey(philosopherId) || _eating.ContainsKey(philosopherId);
+                    if (result)
+                        Rollback(philosopherId);
+                }
+
+                if (result)
+                {   
                     _logger.LogDebug($"Retranslate command: {command}");
                     ok = await _retranslationService.RetranslateCommand(
                         command.Command,
@@ -147,15 +183,26 @@ public class PhilosophersStates(
         
         if (_thinking.ContainsKey(philosopherId))
         {
+            _logger.LogDebug("I am thinking");
             item = _thinking[philosopherId];
             _thinking.Remove(philosopherId);
             _takingFirstFork.Add(philosopherId, item);
         }
         else if (_takingFirstFork.ContainsKey(philosopherId))
         {
+            _logger.LogDebug("I am working");
             item = _takingFirstFork[philosopherId];
             _takingFirstFork.Remove(philosopherId);
             _eating.Add(philosopherId, item);
+        }
+        else
+        {
+            _logger.LogWarning($"Something went wrong {philosopherId}");
+
+            foreach (var p in _thinking)
+                _logger.LogWarning($"{p.Key} - {p.Value}");
+            foreach (var p in _takingFirstFork)
+                _logger.LogWarning($"{p.Key} - {p.Value}");
         }
 
         return item;

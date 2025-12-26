@@ -24,25 +24,33 @@ public class DeadlockAnalyzer(
             return false;
         }
 
-        bool[] forks = new bool[eating.Count + thinking.Count + working.Count];
+        int[] forks = new int[eating.Count + thinking.Count + working.Count];
 
         for (int i = 0; i < forks.Count(); ++i)
         {
-            forks[i] = false;
+            forks[i] = 0;
         }
 
-        for (int i = 0; i < working.Count; ++i)
+        foreach (var item in working)
         {
-            if (working[i].HavingForkId > 0)
-                forks[working[i].HavingForkId] = true;
+            var philosopher = item.Value;
+            if (philosopher.HavingForkId >= 0)
+                ++forks[philosopher.HavingForkId];
+            
+            if (philosopher.TryingToTakeForkId >= 0)
+                ++forks[philosopher.TryingToTakeForkId];
+        }
 
-            if (working[i].TryingToTakeForkId > 0)
-                forks[working[i].TryingToTakeForkId] = true;
+        foreach (var item in eating)
+        {
+            var philosopher = item.Value;
+            ++forks[philosopher.LeftForkId];
+            ++forks[philosopher.RightForkId];
         }
 
         foreach (var f in forks)
         {
-            if (!f)
+            if (f == 0)
                 return false;
         }
 
